@@ -1,0 +1,30 @@
+{
+  "name": "unified_file_manager",
+  "version": "0.1.0",
+  "description": "A unified file manager for all remote storage providers",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akhilmurali/unified_file_manager.git"
+  },
+  "author": "Akhil Murali <github@akhilmurali.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/akhilmurali/unified_file_manager/issues"
+  },
+  "homepage": "https://github.com/akhilmurali/unified_file_manager#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "dotenv": "^6.0.0",
+    "dropbox": "^4.0.9",
+    "express": "^4.16.3",
+    "googleapis": "^27.0.0",
+    "isomorphic-fetch": "^2.2.1",
+    "mongoose": "^5.3.1",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2"
+  }
+}
