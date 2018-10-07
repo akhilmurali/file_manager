@@ -2,7 +2,7 @@
 
 An application to have a consolidated view of your files hosted with multiple providers.
 
-Save costs and time by easily distributing your  storage needs among multiple remote providers. 
+Save cost and time by easily distributing your  storage needs among multiple remote providers. 
 
 ### Version
 0.1.0
