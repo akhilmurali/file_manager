@@ -5,9 +5,9 @@ var jwt = require('jsonwebtoken');
 //-------------------------------Auth MiddleWare-------------------//
 const auth = (req, res, next) => {
     let token = req.header('x-access-token') || req.query.jwt_token;
-    req.token = token;
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) {
+            console.log(err);
             err.status = 401;
             err.message = 'No auth token provided';
             res.json({err});

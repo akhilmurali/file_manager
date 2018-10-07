@@ -3,6 +3,9 @@ let rp = require("request-promise");
 let dotenv = require("dotenv");
 let googleToken = require("../models/googleTokenModel");
 let jwt = require('jsonwebtoken');
+let fs = require('fs');
+let path = require('path');
+
 dotenv.config();
 
 const oauth2Client = new google.auth.OAuth2(
@@ -11,7 +14,13 @@ const oauth2Client = new google.auth.OAuth2(
     process.env.google_callback_url
 );
 
-const scopes = ["https://www.googleapis.com/auth/drive"];
+const scopes = ["https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.appdata",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive.metadata",
+    "https://www.googleapis.com/auth/drive.metadata.readonly",
+    "https://www.googleapis.com/auth/drive.photos.readonly",
+    "https://www.googleapis.com/auth/drive.readonly"];
 
 initiateGoogleOAuth = (req, res) => {
     const url = oauth2Client.generateAuthUrl({
@@ -33,7 +42,7 @@ googleOAuthCallback = (req, res) => {
 
 saveGoogleAccessToken = async (req, res) => {
     if (!req.query.code) {
-        res.json({status: 'err', msg: 'missing parameter'});
+        res.json({ status: 'err', msg: 'missing parameter' });
     }
     const { tokens } = await oauth2Client.getToken(req.query.code);
     console.log(tokens);
@@ -49,9 +58,8 @@ saveGoogleAccessToken = async (req, res) => {
         "token_type": tokens.token_type,
         "scope": tokens.scope
     };
-    console.log(tokenData);
     googleToken
-        .deleteOne({ user_id: decoded._id })
+        .deleteOne({ user_id: decoded.id })
         .then(() => {
             googleToken
                 .create(tokenData)
@@ -68,33 +76,42 @@ saveGoogleAccessToken = async (req, res) => {
 };
 
 listFilesInGDrive = (req, res) => {
-    let decoded = jwt.decode(req.jwt_token, { complete: true });
-    let googleToken = getUserAccessToken(decoded._id, res);
-    rp.get("https://www.googleapis.com/drive/v3/files", {
-        auth: {
-            bearer: globalToken
-        },
-        headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${googleToken}`
-        },
-        qs: {
-            pageSize: 5
-        }
-    })
-        .then(results => {
-            res.json(results);
+    let decoded = jwt.decode(req.query.jwt_token, { complete: false });
+    googleToken.findOne({ user_id: decoded.id })
+        .then(token => {
+            console.log(token);
+            if (token && token.expiry_date > new Date()) {
+                rp.get("https://www.googleapis.com/drive/v3/files", {
+                    auth: {
+                        bearer: token.access_token
+                    },
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: `Bearer ${token.access_token}`
+                    },
+                    qs: {
+                        pageSize: 5
+                    }
+                })
+                    .then(results => {
+                        res.json(results);
+                    })
+                    .catch(err => {
+                        res.json(err);
+                    });
+            } else {
+                res.redirect(`/google/oauth?jwt_token=${req.query.jwt_token}`);
+            }
         })
         .catch(err => {
-            res.json(err);
+            res.redirect(`/google/oauth?jwt_token=${req.query.jwt_token}`);
         });
 };
 
 //File Upload handler:
 uploadAFileToGDrive = (req, res) => {
     //File path on server:
-    let decoded = jwt.decode(req.jwt_token, { complete: true });
-    let googleToken = getUserAccessToken(decoded._id, res);
+    let decoded = jwt.decode(req.query.jwt_token, { complete: false });
     let filePath = req.files;
     let contentBody = req.readFileSync(filePath);
     rp.post("https://www.googleapis.com/upload/drive/v3/files", {
@@ -103,7 +120,7 @@ uploadAFileToGDrive = (req, res) => {
         },
         headers: {
             "Content-Type": "image/jpeg",
-            Authorization: `Bearer ${googleToken}`,
+            "Authorization": `Bearer ${google_access_token}`,
             "Content-Length": new Buffer(contentBody).length
         },
         body: contentBody
@@ -118,33 +135,28 @@ uploadAFileToGDrive = (req, res) => {
 
 //File download handler:
 downloadAFileFromGDrive = (req, res) => {
-    let decoded = jwt.decode(req.jwt_token, { complete: true });
-    let googleToken = getUserAccessToken(decoded._id, res);
-    rp.get(`https://www.googleapis.com/drive/v3/files/${req.params.fileId}?alt=media`, {
-        headers: {
-            Authorization: `Bearer ${googleToken}`
-        }
-    }).then((file) => {
-        res.json(file);
-    })
-        .catch(err => {
-            res.json(err);
-        });
-};
-
-function getUserAccessToken(id, res) {
-    Token.findOne({ user_id: id })
+    let decoded = jwt.decode(req.query.jwt_token, { complete: false });
+    googleToken.findOne({ user_id: decoded.id })
         .then(token => {
             if (token && token.expiry_date > new Date()) {
-                return token.access_token;
+                rp.get(`https://www.googleapis.com/drive/v3/files/${req.params.fileId}?fields=webContentLink`, {
+                    headers: {
+                        Authorization: `Bearer ${token.access_token}`
+                    }
+                }).then((fileData) => {
+                    console.log(fileData);
+                    res.redirect(JSON.parse(fileData).webContentLink);
+                }).catch(err => {
+                    res.json(err);
+                });
             } else {
-                res.redirect("/google/oauth");
+                res.redirect(`/google/oauth?jwt_token=${req.query.jwt_token}`);
             }
         })
-        .catch(err => {
-            res.redirect("/google/oauth");
+        .catch((err) => {
+            res.redirect(`/google/oauth?jwt_token=${req.query.jwt_token}`);
         });
-}
+};
 
 module.exports = {
     initiateGoogleOAuth,

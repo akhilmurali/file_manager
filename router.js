@@ -25,12 +25,12 @@ router.get('/google/oauth/callback', googleController.googleOAuthCallback);
 router.post('/google/oauth/token', authController.auth, googleController.saveGoogleAccessToken);
 
 //Route to list files in root/any folder:
-router.get('/google/files/:folder', authController.auth, googleController.listFilesInGDrive);
+router.get('/google/files/', authController.auth, googleController.listFilesInGDrive);
 
 //Route to upload files to drive:
 router.post('/google/files/:folder/upload', authController.auth, upload.single('avatar'), googleController.uploadAFileToGDrive);
 
 //Route to download files from the drive:
-router.get('/google/files/:folder/:fileId', authController.auth, googleController.downloadAFileFromGDrive);
+router.get('/google/files/:fileId/', authController.auth, googleController.downloadAFileFromGDrive);
 
 module.exports = router;
