@@ -112,23 +112,28 @@ listFilesInGDrive = (req, res) => {
 uploadAFileToGDrive = (req, res) => {
     //File path on server:
     let decoded = jwt.decode(req.query.jwt_token, { complete: false });
-    let filePath = req.files;
-    let contentBody = req.readFileSync(filePath);
-    rp.post("https://www.googleapis.com/upload/drive/v3/files", {
-        qs: {
-            uploadType: "media"
-        },
-        headers: {
-            "Content-Type": "image/jpeg",
-            "Authorization": `Bearer ${google_access_token}`,
-            "Content-Length": new Buffer(contentBody).length
-        },
-        body: contentBody
-    })
-        .then(result => {
-            res.json(result);
+    let buffer = fs.readFileSync(path.resolve(__dirname, `../uploads/${req.file.filename}`));
+    googleToken.findOne({ user_id: decoded.id })
+        .then((token) => {
+            if (token.expiry_date > new Date() && token) {
+                rp.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", {
+                    headers: {
+                        "Authorization": `Bearer ${token.access_token}`,
+                        "Content-Type": req.file.mimetype,
+                        "Content-Length": req.file.size
+                    },
+                    body: buffer
+                }).then(result => {
+                    console.log(result);
+                    res.json(result);
+                }).catch(err => {
+                    res.json(err);
+                });
+            }else{
+                res.json({status: 'err', msg:'redo oauth'});
+            }
         })
-        .catch(err => {
+        .catch((err) => {
             res.json(err);
         });
 };
@@ -144,7 +149,6 @@ downloadAFileFromGDrive = (req, res) => {
                         Authorization: `Bearer ${token.access_token}`
                     }
                 }).then((fileData) => {
-                    console.log(fileData);
                     res.redirect(JSON.parse(fileData).webContentLink);
                 }).catch(err => {
                     res.json(err);
@@ -158,11 +162,4 @@ downloadAFileFromGDrive = (req, res) => {
         });
 };
 
-module.exports = {
-    initiateGoogleOAuth,
-    googleOAuthCallback,
-    listFilesInGDrive,
-    uploadAFileToGDrive,
-    downloadAFileFromGDrive,
-    saveGoogleAccessToken
-};
+module.exports = { initiateGoogleOAuth, googleOAuthCallback, listFilesInGDrive, uploadAFileToGDrive, downloadAFileFromGDrive, saveGoogleAccessToken };
