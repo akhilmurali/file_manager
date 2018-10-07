@@ -1,23 +1,23 @@
-import User from '../models/userModel';
+let User = require('../models/userModel');
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 
 //-------------------------------Auth MiddleWare-------------------//
 const auth = (req, res, next) => {
-    let token = req.header('x-access-token');
+    let token = req.header('x-access-token') || req.query.jwt_token;
+    req.token = token;
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) {
             err.status = 401;
             err.message = 'No auth token provided';
-            next(err);
+            res.json({err});
         } else {
             next();
         }
     });
 }
 
-//-------------------sign up ----------------------------------------//
-
+//--------------------------------SignUp ----------------------------------------//
 const signup = function (req, res) {
     var hashedPassword = bcrypt.hashSync(req.body.password, 8);
     var userData = {
@@ -46,7 +46,8 @@ const signup = function (req, res) {
             });
         });
 }
-//----------------Login ------------------------------------------
+
+//--------------------------------Login ------------------------------------------//
 const login = function(req, res){
     User.findOne({
         email: req.body.email
@@ -71,4 +72,3 @@ const login = function(req, res){
 }
 
 module.exports = {auth, login, signup};
-}
