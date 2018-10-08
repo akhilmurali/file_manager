@@ -4,7 +4,13 @@ An application to have a consolidated view of your files hosted with multiple pr
 
 
 ### Version
-0.1.0
+0.1.0 | G-Drive integration
+
+### Prospective Future Versions
+
+0.2.0 | Dropbox integration
+
+0.3.0 | UI for application
 
 ### Installation
 
